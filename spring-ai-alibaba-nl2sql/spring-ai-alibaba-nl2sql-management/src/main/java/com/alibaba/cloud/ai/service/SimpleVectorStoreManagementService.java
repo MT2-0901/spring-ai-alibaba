@@ -54,7 +54,7 @@ public class SimpleVectorStoreManagementService implements VectorStoreManagement
 
 	@Autowired
 	public SimpleVectorStoreManagementService(@Value("${spring.ai.dashscope.api-key:default_api_key}") String apiKey,
-											  Gson gson, DbAccessor dbAccessor, DbConfig dbConfig) {
+			Gson gson, DbAccessor dbAccessor, DbConfig dbConfig) {
 		this.gson = gson;
 		this.dbAccessor = dbAccessor;
 		this.dbConfig = dbConfig;
@@ -74,8 +74,8 @@ public class SimpleVectorStoreManagementService implements VectorStoreManagement
 	public Boolean schema(SchemaInitRequest schemaInitRequest) throws Exception {
 		DbConfig dbConfig = schemaInitRequest.getDbConfig();
 		DbQueryParameter dqp = DbQueryParameter.from(dbConfig)
-				.setSchema(dbConfig.getSchema())
-				.setTables(schemaInitRequest.getTables());
+			.setSchema(dbConfig.getSchema())
+			.setTables(schemaInitRequest.getTables());
 
 		DeleteRequest deleteRequest = new DeleteRequest();
 		deleteRequest.setVectorType("column");
@@ -103,8 +103,8 @@ public class SimpleVectorStoreManagementService implements VectorStoreManagement
 		vectorStore.add(columnDocuments);
 
 		List<Document> tableDocuments = tableInfoBOS.stream()
-				.map(this::convertTableToDocument)
-				.collect(Collectors.toList());
+			.map(this::convertTableToDocument)
+			.collect(Collectors.toList());
 
 		vectorStore.add(tableDocuments);
 
@@ -135,22 +135,22 @@ public class SimpleVectorStoreManagementService implements VectorStoreManagement
 			dqp.setColumn(columnInfoBO.getName());
 			List<String> sampleColumn = dbAccessor.sampleColumn(dbConfig, dqp);
 			sampleColumn = Optional.ofNullable(sampleColumn)
-					.orElse(new ArrayList<>())
-					.stream()
-					.filter(Objects::nonNull)
-					.distinct()
-					.limit(3)
-					.filter(s -> s.length() <= 100)
-					.toList();
+				.orElse(new ArrayList<>())
+				.stream()
+				.filter(Objects::nonNull)
+				.distinct()
+				.limit(3)
+				.filter(s -> s.length() <= 100)
+				.toList();
 
 			columnInfoBO.setTableName(tableInfoBO.getName());
 			columnInfoBO.setSamples(gson.toJson(sampleColumn));
 		}
 
 		ColumnInfoBO primaryColumnDO = columnInfoBOS.stream()
-				.filter(ColumnInfoBO::isPrimary)
-				.findFirst()
-				.orElse(new ColumnInfoBO());
+			.filter(ColumnInfoBO::isPrimary)
+			.findFirst()
+			.orElse(new ColumnInfoBO());
 
 		tableInfoBO.setPrimaryKey(primaryColumnDO.getName());
 		tableInfoBO.setForeignKey(String.join("、", buildForeignKeyList(tableInfoBO.getName())));
@@ -230,9 +230,9 @@ public class SimpleVectorStoreManagementService implements VectorStoreManagement
 	public List<Document> search(SearchRequest searchRequest) throws Exception {
 		try {
 			return vectorStore.similaritySearch(searchRequest)
-					.stream()
-					.filter(document -> document.getScore() > 0.2)
-					.toList();
+				.stream()
+				.filter(document -> document.getScore() > 0.2)
+				.toList();
 		}
 		catch (Exception e) {
 			throw new Exception("Failed to search vector store: " + e.getMessage(), e);
