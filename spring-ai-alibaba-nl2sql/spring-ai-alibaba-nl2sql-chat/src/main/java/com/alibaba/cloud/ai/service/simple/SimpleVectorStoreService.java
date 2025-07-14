@@ -82,14 +82,8 @@ public class SimpleVectorStoreService extends BaseVectorStoreService {
 			.setSchema(dbConfig.getSchema())
 			.setTables(schemaInitRequest.getTables());
 
-		DeleteRequest deleteRequestColumn = new DeleteRequest();
-		deleteRequestColumn.setVectorType("column");
-		deleteDocuments(deleteRequestColumn);
-
-		DeleteRequest deleteRequestTable = new DeleteRequest();
-		deleteRequestTable.setVectorType("table");
-		deleteDocuments(deleteRequestTable);
-
+		deleteDocumentsByVectorType("column");
+		deleteDocumentsByVectorType("table");
 		List<ForeignKeyInfoBO> foreignKeyInfoBOS = dbAccessor.showForeignKeys(dbConfig, dqp);
 		Map<String, List<String>> foreignKeyMap = buildForeignKeyMap(foreignKeyInfoBOS);
 
@@ -109,7 +103,7 @@ public class SimpleVectorStoreService extends BaseVectorStoreService {
 		}).collect(Collectors.toList());
 
 		vectorStore.add(columnDocuments);
-		documentIdsByType.computeIfAbsent("column", k -> new HashSet<>())
+		documentIdsByType.computeIfAbsent("column", k -> ConcurrentHashMap.newKeySet())
 			.addAll(columnDocuments.stream().map(Document::getId).toList());
 
 		List<Document> tableDocuments = tableInfoBOS.stream()
@@ -117,7 +111,7 @@ public class SimpleVectorStoreService extends BaseVectorStoreService {
 			.collect(Collectors.toList());
 
 		vectorStore.add(tableDocuments);
-		documentIdsByType.computeIfAbsent("table", k -> new HashSet<>())
+		documentIdsByType.computeIfAbsent("table", k -> ConcurrentHashMap.newKeySet())
 			.addAll(tableDocuments.stream().map(Document::getId).toList());
 
 		return true;
@@ -210,6 +204,23 @@ public class SimpleVectorStoreService extends BaseVectorStoreService {
 		}
 
 		throw new IllegalArgumentException("Either id or vectorType must be specified for deletion.");
+	}
+
+	/**
+	 * 删除指定条件的向量数据
+	 * @param vectorType 向量类型
+	 * @return 是否删除成功
+	 */
+	public Boolean deleteDocumentsByVectorType(String vectorType) {
+		if (vectorType != null && !vectorType.isEmpty()) {
+			Set<String> idsToDelete = documentIdsByType.remove(vectorType);
+			if (idsToDelete != null && !idsToDelete.isEmpty()) {
+				vectorStore.delete(new ArrayList<>(idsToDelete));
+			}
+			return true;
+		}
+
+		throw new IllegalArgumentException("Either vectorType must be specified for deletion.");
 	}
 
 	/**
